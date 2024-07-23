@@ -5,25 +5,28 @@ from dotenv import load_dotenv
 from gemini_response import generate_gemini_response
 from chat_history import clear_chat_history, initialize_chat, display_chat_messages
 import google.generativeai as ggi
-from llama_index.multi_modal_llms.ollama import OllamaMultiModal
-from llama_index.core.schema import ImageDocument
+from multimodal import ImageQuestionAnswering
+# from llama_index.multi_modal_llms.ollama import OllamaMultiModal
+# from llama_index.core.schema import ImageDocument
 # Import vector database functions
 # from vector_db import save_chat_history, load_chat_history, get_embedding, search_faiss
 
 load_dotenv(".env")
 
-fetcheed_api_key = os.getenv("API_KEY")
-ggi.configure(api_key=fetcheed_api_key)
+# fetcheed_api_key = os.getenv("API_KEY")
+# ggi.configure(api_key=fetcheed_api_key)
 
-# model = ggi.GenerativeModel("gemini-pro") 
-vision_model = ggi.GenerativeModel('gemini-1.5-flash')
-chat = vision_model.start_chat()
+# # model = ggi.GenerativeModel("gemini-pro") 
+# vision_model = ggi.GenerativeModel('gemini-1.5-flash')
+# chat = vision_model.start_chat()
 
-def LLM_Response(question, img):
-    if img is None:
-        return chat.send_message(question, stream=True)
-    else:
-        return chat.send_message([question, img], stream=True)
+# def LLM_Response(question, img):
+#     if img is None:
+#         return chat.send_message(question, stream=True, generation_config=config)
+#     else:
+#         return chat.send_message([question, img], stream=True, generation_config=config)
+
+# image_qa = ImageQuestionAnswering()
 
 # Set up Streamlit app
 st.set_page_config(page_title="🦙💬 Receipts Chatbot 📖")
@@ -34,6 +37,10 @@ with st.sidebar:
     temperature = st.sidebar.slider('temperature', min_value=0.01, max_value=2.0, value=1.0, step=0.01)
     max_length = st.sidebar.slider('max_length', min_value=64, max_value=4096, value=512, step=8)
     st.button('Clear Chat History', on_click=clear_chat_history)
+    # config = ggi.GenerationConfig(
+    #     max_output_tokens=max_length, temperature=temperature, top_p=1, top_k=32
+    # )
+
 
 # Initialize chat
 initialize_chat()
@@ -55,8 +62,8 @@ if 'uploaded_image' not in st.session_state:
 if uploaded_file:
     st.session_state.uploaded_image = Image.open(uploaded_file)
     st.image(st.session_state.uploaded_image, caption='Uploaded Image', use_column_width=True)
-else:
-    st.session_state.uploaded_image = None
+# else:
+#     st.session_state.uploaded_image = None
 
 # Text input for chat
 if prompt := st.chat_input():
@@ -72,14 +79,22 @@ if prompt:
 # Generate a new response if the last message is not from the assistant
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.spinner("Thinking..."):
-        instruct = generate_gemini_response()
-        instruct += prompt
-        result = LLM_Response(instruct, st.session_state.uploaded_image)
+        # instruct = generate_gemini_response()
+        # instruct += prompt
+        # result = LLM_Response(instruct, st.session_state.uploaded_image)
+        # Initialize the singleton instance once
+        if 'image_qa_instance' not in st.session_state:
+            st.session_state.image_qa_instance = ImageQuestionAnswering()
+        if prompt:
+            print(st.session_state.uploaded_image)
+            result = st.session_state.image_qa_instance.generate_response(st.session_state.uploaded_image, prompt)
         st.subheader("Response:")
         full_response = " "
         placeholder = st.empty()
-        for word in result:
-            full_response += word.text
+        # for word in result:
+        #     print(word.text)
+        #     full_response += word.text
+        full_response = result
         placeholder.markdown(full_response)
     message = {"role": "assistant", "content": full_response}
     st.session_state.messages.append(message)
