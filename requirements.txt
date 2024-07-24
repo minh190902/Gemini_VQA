@@ -1,8 +1,7 @@
 streamlit==1.29.0
 nltk==3.8.1
+google-generativeai
 python-dotenv
-llama-index==0.10.50
-llama-index-llms-huggingface
-llama-index-embeddings-huggingface
-weaviate-client==3.*
-llama-index-vector-stores-weaviate==0.1.4
+pillow
+transformers
+easyocr==0.4.2
