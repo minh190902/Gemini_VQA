@@ -1,4 +1,6 @@
 import os
+import cv2
+import time
 import streamlit as st
 from PIL import Image
 from dotenv import load_dotenv
@@ -41,6 +43,10 @@ with st.sidebar:
     #     max_output_tokens=max_length, temperature=temperature, top_p=1, top_k=32
     # )
 
+# Cache the model using st.cache_resource
+@st.cache_resource
+def load_image_qa_model():
+    return ImageQuestionAnswering()
 
 # Initialize chat
 initialize_chat()
@@ -60,10 +66,9 @@ if 'uploaded_image' not in st.session_state:
 
 # If a new file is uploaded, store it in the session state
 if uploaded_file:
-    st.session_state.uploaded_image = Image.open(uploaded_file)
+    st.session_state.uploaded_image = Image.open(uploaded_file)#.convert(mode='RGB')
+    # print(st.session_state.uploaded_image)
     st.image(st.session_state.uploaded_image, caption='Uploaded Image', use_column_width=True)
-# else:
-#     st.session_state.uploaded_image = None
 
 # Text input for chat
 if prompt := st.chat_input():
@@ -75,29 +80,28 @@ if prompt:
     st.session_state.messages.append({"role": "user", "content": st.session_state.uploaded_image, "type": "image"})
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-
 # Generate a new response if the last message is not from the assistant
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.spinner("Thinking..."):
         # instruct = generate_gemini_response()
         # instruct += prompt
         # result = LLM_Response(instruct, st.session_state.uploaded_image)
-        # Initialize the singleton instance once
-        if 'image_qa_instance' not in st.session_state:
-            st.session_state.image_qa_instance = ImageQuestionAnswering()
+        
+        # Load the model using cache
+        image_qa_instance = load_image_qa_model()
+        
         if prompt:
             print(st.session_state.uploaded_image)
-            result = st.session_state.image_qa_instance.generate_response(st.session_state.uploaded_image, prompt)
-        st.subheader("Response:")
-        full_response = " "
+            result = image_qa_instance.generate_response(st.session_state.uploaded_image, prompt)
+        
         placeholder = st.empty()
-        # for word in result:
-        #     print(word.text)
-        #     full_response += word.text
-        full_response = result
-        placeholder.markdown(full_response)
-    message = {"role": "assistant", "content": full_response}
+        
+        def stream_data():
+            for word in result.split(" "):
+                yield word + " "
+                time.sleep(0.04)
+        
+        st.write_stream(stream_data)
+        
+    message = {"role": "assistant", "content": result}
     st.session_state.messages.append(message)
-
-
-
