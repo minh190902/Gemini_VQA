@@ -1,5 +1,6 @@
 streamlit
 torch
+packaging
 pillow
 transformers
 accelerate
